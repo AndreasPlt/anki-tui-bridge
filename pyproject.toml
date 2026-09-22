@@ -1,6 +1,6 @@
 [project]
-name = "anki-queue-bridge"
-version = "0.1.0"
+name = "anki-tui-bridge"
+version = "0.3.0"
 description = "Anki add-on that exposes the scheduler's review queue over localhost HTTP"
 readme = "README.md"
 authors = [

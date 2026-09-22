@@ -2,9 +2,10 @@
 
     uv run python scripts/install.py            # install (or update)
     uv run python scripts/install.py --uninstall
+    uv run python scripts/install.py --clean    # remove older installs of this add-on
 
-The add-on is distributed by copying `src/anki_queue_bridge` into
-`addons21/anki_queue_bridge`, which is how Anki loads local add-ons.
+The add-on is distributed by copying `src/anki_tui_bridge` into
+`addons21/anki_tui_bridge`, which is how Anki loads local add-ons.
 """
 
 from __future__ import annotations
@@ -15,7 +16,9 @@ import shutil
 import sys
 from pathlib import Path
 
-ADDON_NAME = "anki_queue_bridge"
+ADDON_NAME = "anki_tui_bridge"
+#: Earlier releases of this add-on, which bind the same port and must go.
+STALE_ADDON_NAMES = ("anki_queue_bridge", "anki-queue-bridge", "anki-tui-bridge")
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "src" / ADDON_NAME
 
 
@@ -49,6 +52,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--addons-dir", type=Path, default=None, help="override addons21")
     parser.add_argument("--uninstall", action="store_true", help="remove the add-on")
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="remove older installs of this add-on (they bind the same port)",
+    )
     args = parser.parse_args()
 
     root = args.addons_dir or addons_dir()
@@ -56,6 +64,20 @@ def main() -> int:
         print(f"add-ons folder not found: {root}", file=sys.stderr)
         print("Is Anki installed? Use --addons-dir to point at it manually.", file=sys.stderr)
         return 1
+
+    stale = [
+        root / name for name in STALE_ADDON_NAMES if name != ADDON_NAME and (root / name).is_dir()
+    ]
+    if stale:
+        print("older versions of this add-on are installed and occupy the same port:")
+        for path in stale:
+            print(f"  {path}")
+        if args.clean:
+            for path in stale:
+                shutil.rmtree(path)
+                print(f"removed {path}")
+        else:
+            print("remove them with --clean before starting Anki, then install this version.")
 
     target = root / ADDON_NAME
     if args.uninstall:

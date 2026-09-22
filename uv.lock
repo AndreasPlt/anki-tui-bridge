@@ -7,8 +7,8 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "anki-queue-bridge"
-version = "0.1.0"
+name = "anki-tui-bridge"
+version = "0.3.0"
 source = { editable = "." }
 
 [package.dev-dependencies]
