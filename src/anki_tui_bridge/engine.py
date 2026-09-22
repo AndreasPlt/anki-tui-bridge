@@ -48,6 +48,21 @@ def _collection() -> Any:
     return col
 
 
+def _select_deck(col: Any, deck_id: int) -> None:
+    """Make `deck_id` Anki's selected deck, the way clicking it would.
+
+    `get_queued_cards` computes the queue for the *selected* deck, so the
+    requested deck has to be selected before the query — and it stays selected
+    afterwards. Restoring the previous deck is deliberately avoided: that
+    switch would be another undoable operation, and any new operation clears
+    Anki's redo stack. The client fetches the next card right after undoing, so
+    a restore here would make redo impossible every time. Leaving the deck
+    selected is also what Anki itself does when you study a deck.
+    """
+    if col.decks.get_current_id() != deck_id:
+        col.decks.set_current(deck_id)
+
+
 class AnkiEngine:
     """Implements the bridge's provider protocol against Anki."""
 
@@ -109,23 +124,14 @@ class AnkiEngine:
 
         def work() -> dict[str, Any]:
             col = _collection()
-
-            # The scheduler computes its queue for the *selected* deck, so we
-            # select ours and restore the previous one around the query.
-            # `get_queued_cards` itself is idempotent and consumes nothing.
-            previous = col.decks.get_current_id()
-            switched = previous != deck_id
-            if switched:
-                col.decks.set_current(deck_id)
-            try:
-                # Ask for enough cards to step over everything excluded.
-                queued = col.sched.get_queued_cards(
-                    fetch_limit=max(1, fetch_limit) + len(skip),
-                    intraday_learning_only=False,
-                )
-            finally:
-                if switched:
-                    col.decks.set_current(previous)
+            # The queue is computed for the selected deck, so select ours; it
+            # stays selected (see _select_deck for why nothing restores it).
+            _select_deck(col, deck_id)
+            # Ask for enough cards to step over everything excluded.
+            queued = col.sched.get_queued_cards(
+                fetch_limit=max(1, fetch_limit) + len(skip),
+                intraday_learning_only=False,
+            )
 
             cards = [card for card in queued.cards if int(card.card.id) not in skip]
             front = cards[0] if cards else None

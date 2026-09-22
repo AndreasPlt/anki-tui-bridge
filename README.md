@@ -223,8 +223,11 @@ bounded:
 
 - `col.sched.get_queued_cards(fetch_limit=…, intraday_learning_only=False)` is the same
   backend call Anki's own reviewer uses; the scheduler computes its queue for the
-  **currently selected deck**, so the add-on selects the requested deck for the duration of
-  the query and restores the previous selection immediately afterwards.
+  **currently selected deck**, so the add-on selects the requested deck and leaves it
+  selected, the way clicking a deck in Anki does. It deliberately does not restore the
+  previous deck: every switch is its own undoable operation, so one after a review would
+  sit above it (the first undo would no longer reach the review) and switching back after an
+  undo would clear Anki's redo stack (redo would never work).
 - Answers rewind the card timer (`card.timer_started = now − elapsed_ms`) and then call
   `sched.answerCard`, so Anki's own code computes and logs the duration.
 - Undo/redo call `col.undo()` / `col.redo()` (Anki's own `UndoEmpty` becomes
