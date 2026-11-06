@@ -1,11 +1,12 @@
-"""Install the add-on into Anki's add-ons folder.
+"""Install the add-on into Anki.
 
     uv run python scripts/install.py            # install (or update)
     uv run python scripts/install.py --uninstall
     uv run python scripts/install.py --clean    # remove older installs of this add-on
 
-The add-on is distributed by copying `src/anki_tui_bridge` into
-`addons21/anki_tui_bridge`, which is how Anki loads local add-ons.
+Installing builds `dist/anki_tui_bridge.ankiaddon` (see `build.py`) and opens it with Anki,
+which asks to confirm. Replacing an earlier install keeps your config (`meta.json`) and
+`user_files/`.
 """
 
 from __future__ import annotations
@@ -13,13 +14,14 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-ADDON_NAME = "anki_tui_bridge"
+from build import ADDON_NAME, build
+
 #: Earlier releases of this add-on, which bind the same port and must go.
 STALE_ADDON_NAMES = ("anki_queue_bridge", "anki-queue-bridge", "anki-tui-bridge")
-PACKAGE_DIR = Path(__file__).resolve().parent.parent / "src" / ADDON_NAME
 
 
 def addons_dir() -> Path:
@@ -34,23 +36,24 @@ def addons_dir() -> Path:
     return base / "addons21"
 
 
-def install(target_root: Path) -> Path:
-    if not PACKAGE_DIR.is_dir():
-        raise SystemExit(f"add-on package not found: {PACKAGE_DIR}")
-    target = target_root / ADDON_NAME
-    if target.exists():
-        shutil.rmtree(target)
-    shutil.copytree(
-        PACKAGE_DIR,
-        target,
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-    )
-    return target
+def open_with_anki(path: Path) -> None:
+    """Hand the file to Anki through the OS file association."""
+    if sys.platform == "darwin":
+        subprocess.run(["open", path], check=True)
+    elif sys.platform.startswith("win"):
+        os.startfile(path)
+    else:
+        subprocess.run(["xdg-open", path], check=True)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--addons-dir", type=Path, default=None, help="override addons21")
+    parser.add_argument(
+        "--addons-dir",
+        type=Path,
+        default=None,
+        help="override addons21 (for --uninstall and --clean)",
+    )
     parser.add_argument("--uninstall", action="store_true", help="remove the add-on")
     parser.add_argument(
         "--clean",
@@ -88,9 +91,10 @@ def main() -> int:
             print(f"not installed: {target}")
         return 0
 
-    installed = install(root)
-    print(f"installed {installed}")
-    print("Restart Anki (or use Tools → Add-ons → Check for Updates) to start the bridge.")
+    package = build()
+    print(f"built {package}")
+    open_with_anki(package)
+    print("Confirm the install in Anki, then restart Anki to start the bridge.")
     print("Verify with: curl http://127.0.0.1:8766/health")
     return 0
 

@@ -38,10 +38,8 @@ From a checkout of this repository:
 uv run python scripts/install.py
 ```
 
-This copies `src/anki_tui_bridge/` into your `addons21/` folder
-(macOS: `~/Library/Application Support/Anki2/addons21`, Linux:
-`~/.local/share/Anki2/addons21`, Windows: `%APPDATA%\Anki2\addons21`). Restart Anki
-afterwards.
+This builds `dist/anki_tui_bridge.ankiaddon` and opens it with Anki. Confirm the install and
+restart Anki. `uv run python scripts/build.py` only builds the file.
 
 Verify it is up:
 
@@ -245,7 +243,7 @@ bounded:
 uv run pytest          # unit tests (no Anki required)
 uv run ruff check .
 uv run ruff format .
-uv run python scripts/install.py --addons-dir PATH   # install into a test profile
+uv run python scripts/build.py   # dist/anki_tui_bridge.ankiaddon, without installing
 ```
 
 ## License
